@@ -7,7 +7,7 @@ steps:
   publish:
     image: *build_plugin
     settings:
-      dockerfile: Dockerfile
+      dockerfile: src/Dockerfile
       platforms: *platforms
       repo: ricariel/solarflow-control,git.zyria.de/pyrox/solarflow-control
       mtu: 1400
