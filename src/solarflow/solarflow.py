@@ -342,6 +342,9 @@ class Solarflow:
     def getOutputHomePower(self):
         return self.outputHomePower
 
+    def getDischargePower(self):
+        return self.outputPackPower
+
     def getSolarInputPower(self):
         return self.solarInputPower
 
@@ -353,7 +356,7 @@ class Solarflow:
 
     def getBypass(self):
         return self.bypass
-    
+
     def getCanDischarge(self):
         fullage = self.getLastFullBattery()
         can_discharge = (self.batteryTarget == "discharging") or (self.batteryTarget == "charging" and fullage < self.fullChargeInterval)
