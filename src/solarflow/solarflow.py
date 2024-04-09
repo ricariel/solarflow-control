@@ -343,7 +343,7 @@ class Solarflow:
         return self.outputHomePower
 
     def getDischargePower(self):
-        return self.outputPackPower
+        return self.packInputPower
 
     def getSolarInputPower(self):
         return self.solarInputPower
@@ -353,6 +353,9 @@ class Solarflow:
 
     def getInverseMaxPower(self):
         return self.inverseMaxPower
+
+    def getLimit(self):
+        return self.outputLimit
 
     def getBypass(self):
         return self.bypass
