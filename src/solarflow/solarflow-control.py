@@ -301,12 +301,20 @@ def limitHomeInput(client: mqtt_client):
         
         if demand > 0:
             remainder = demand-direct_panel_power
-            log.info(f'Direct connected panels ({direct_panel_power:.1f}W) can\'t cover demand ({demand:.1f}W), trying to get rest from hub.')
+            log.info(f'Direct connected panels ({direct_panel_power:.1f}W) can\'t cover demand ({demand:.1f}W), trying to get {remainder:.1f}W from hub.')
         else:
             remainder = demand + inv.getACPower()
-            log.info(f'Grid feed in: {demand:.1f}W from {"battery, lowering limit to avoid it." if direct_panel_power == 0 and inv.getHubDCPower() > 0 and hub.getDischargePower() > 0 else "direct panels or other source."}')
+            source = "unknown"
+            if direct_panel_power == 0 and hub.getOutputHomePower() > 0 and hub.getDischargePower() > 0:
+                source = "battery"
+            # since we usually set the inverter limit not to zero there is always a little bit drawn from the hub (10-15W)
+            if direct_panel_power == 0 and hub.getOutputHomePower() > 15 and hub.getDischargePower() == 0 and not hub.getBypass():
+                source = "hub solarpower"
+            if direct_panel_power > 0:
+                source = "panels connected directly to inverter"
         
-        if remainder > 0:
+        # if there is need to take action (remaining demand > 5 W - do not compensate anything below that)
+        if remainder > 5:
             log.info(f'Checking if Solarflow is willing to contribute {remainder:.1f}W ...')
             sf_contribution = getSFPowerLimit(hub,remainder)
 
@@ -330,12 +338,18 @@ def limitHomeInput(client: mqtt_client):
                 limit = hub_limit - 10
     
             inv_limit = inv.setLimit(limit)
-
-
-        #lmt = max(remainder,getDirectPanelLimit(inv,hub,smt))
-        #inv_limit = inv.setLimit(lmt)
-        #log.info(f'Setting hub limit ({remainder}W) bigger than inverter (channel) limit ({direct_limit}W) to avoid MPPT challenges.')
-        #hub_limit = hub.setOutputLimit(lmt+10)        # set SF limit higher than inverter limit to avoid MPPT challenges
+        
+        # if remainder is negative we are feeding in too much
+        if remainder < 0:
+            log.info(f'Grid feed in from {source}! Remainder is {remainder:.1f}')
+            if source == "hub solarpower":
+                # reduce the inverter limit
+                log.info(f'Will reduce input from {source}, so that the hub can use it to charge!')
+                limit = inv.getChannelLimit()
+                inv.setLimit(limit+remainder*inv.getNrHubChannels())
+            if source == "panels connected directly to inverter" or source == "unknown":
+                # generally feeding in from direct solar power is ok
+                log.info("You are actively contributing to the green energy initiative!")
 
     panels_dc = "|".join([f'{v:>2}' for v in inv.getDirectDCPowerValues()])
     hub_dc = "|".join([f'{v:>2}' for v in inv.getHubDCPowerValues()])
